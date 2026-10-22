@@ -26,9 +26,15 @@ CHANNELS = [
 conn = sqlite3.connect('bot.db', check_same_thread=False)
 c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY)''')
-c.execute('''CREATE TABLE IF NOT EXISTS ads (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message_ids TEXT, admin_msg_ids TEXT DEFAULT '', status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-c.execute('''CREATE TABLE IF NOT EXISTS pricing_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message_ids TEXT, admin_msg_ids TEXT DEFAULT '', status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-c.execute('''CREATE TABLE IF NOT EXISTS buy_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message_ids TEXT, admin_msg_ids TEXT DEFAULT '', link TEXT DEFAULT '', status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+c.execute('''CREATE TABLE IF NOT EXISTS ads 
+    (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message_ids TEXT, admin_msg_ids TEXT DEFAULT '',
+     status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+c.execute('''CREATE TABLE IF NOT EXISTS pricing_requests 
+    (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message_ids TEXT, admin_msg_ids TEXT DEFAULT '',
+     status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+c.execute('''CREATE TABLE IF NOT EXISTS buy_requests 
+    (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message_ids TEXT, admin_msg_ids TEXT DEFAULT '',
+     link TEXT DEFAULT '', status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
 conn.commit()
 
 def is_admin(user_id):
@@ -88,8 +94,7 @@ async def show_admin_panel(update, context):
 async def show_user_menu(update, context):
     if update.callback_query: await update.callback_query.edit_message_text(WELCOME, reply_markup=main_menu_keyboard())
     else: await update.message.reply_text(WELCOME, reply_markup=main_menu_keyboard())
-
-async def mediator_handler(update, context):
+        async def mediator_handler(update, context):
     text = "قیمت های واسطه گری به این صورت است:\n\nمعامله زیر 50 هزار : رایگان\n━━━━━━━━━━━━━━━━━\nمعامله 50 هزار تا 100 هزار: رایگان\n━━━━━━━━━━━━━━━━━\nمعامله 100 تا 300 : نفری ۱۰ هزار\n━━━━━━━━━━━━━━━━━\nمعامله 400 تا 900 هزار: نفری ۵۰ هزار\n━━━━━━━━━━━━━━━━━\nمعامله 1500 تا 3 میل : نفری 100 هزار\n━━━━━━━━━━━━━━━━━\nمعامله ۴ میل تا ۱۰ میل : نفری 350 هزار\n━━━━━━━━━━━━━━━━━\nمعامله های بالای 10 میل: نفری ۵۰۰ هزار\n\nاگر با قیمت ها اوکی بودید گزینه تایید رو بزنید."
     await update.callback_query.edit_message_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("✅ تایید", callback_data="mediator_confirm")], [InlineKeyboardButton("🔙 برگشت", callback_data="restart")]]))
 
@@ -192,7 +197,6 @@ async def submit_buy(update, context):
     except: pass
     await query.edit_message_text("لینک شما دریافت شد ✅\nپس از استعلام به شما اطلاع داده میشود.")
     context.user_data.clear()
-
 async def approve_ad(update, context, ad_id):
     query = update.callback_query
     c.execute("SELECT user_id, admin_msg_ids, status FROM ads WHERE id=?", (ad_id,))
