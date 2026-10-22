@@ -127,7 +127,6 @@ async def report_handler(update, context):
     context.user_data.clear()
     context.user_data['state'] = 'report_waiting'
     await update.callback_query.edit_message_text("⚠️ لطفاً مشکل یا باگ پیش آمده را توضیح دهید و ارسال کنید:", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 برگشت", callback_data="restart")]]))
-
 async def submit_ad(update, context):
     query = update.callback_query
     await query.answer()
@@ -197,6 +196,7 @@ async def submit_buy(update, context):
     except: pass
     await query.edit_message_text("لینک شما دریافت شد ✅\nپس از استعلام به شما اطلاع داده میشود.")
     context.user_data.clear()
+
 async def approve_ad(update, context, ad_id):
     query = update.callback_query
     c.execute("SELECT user_id, admin_msg_ids, status FROM ads WHERE id=?", (ad_id,))
@@ -253,8 +253,7 @@ async def start_reply_buy(update, context, req_id):
     context.user_data['admin_reply_buy_for'] = {'user_id': row[0], 'request_id': req_id}
     context.user_data['state'] = 'admin_reply_buy'
     await query.edit_message_text(f"پاسخ خود را برای کاربر {row[0]} تایپ کنید.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 لغو", callback_data="admin_back")]]))
-
-async def admin_show_ads(update, context):
+    async def admin_show_ads(update, context):
     query = update.callback_query
     c.execute("SELECT id, user_id, status FROM ads ORDER BY id DESC LIMIT 30")
     rows = c.fetchall()
