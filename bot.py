@@ -12,8 +12,7 @@ from telegram.ext import (
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ================== تنظیمات ==================
-BOT_TOKEN = os.environ.get("8681003972:AAFudh28b8om8hGwuklkLtNxyDTEsGjuWLI")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 8396752402
 AD_CHANNEL_ID = "@Vasetearminazizi"
 
@@ -22,19 +21,12 @@ CHANNELS = [
     ("@etemadearminazizi", "https://t.me/etemadearminazizi"),
 ]
 
-# ================== دیتابیس ==================
 conn = sqlite3.connect('bot.db', check_same_thread=False)
 c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY)''')
-c.execute('''CREATE TABLE IF NOT EXISTS ads 
-    (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message_ids TEXT, admin_msg_ids TEXT DEFAULT '',
-     status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-c.execute('''CREATE TABLE IF NOT EXISTS pricing_requests 
-    (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message_ids TEXT, admin_msg_ids TEXT DEFAULT '',
-     status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-c.execute('''CREATE TABLE IF NOT EXISTS buy_requests 
-    (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message_ids TEXT, admin_msg_ids TEXT DEFAULT '',
-     link TEXT DEFAULT '', status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+c.execute('''CREATE TABLE IF NOT EXISTS ads (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message_ids TEXT, admin_msg_ids TEXT DEFAULT '', status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+c.execute('''CREATE TABLE IF NOT EXISTS pricing_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message_ids TEXT, admin_msg_ids TEXT DEFAULT '', status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+c.execute('''CREATE TABLE IF NOT EXISTS buy_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message_ids TEXT, admin_msg_ids TEXT DEFAULT '', link TEXT DEFAULT '', status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
 conn.commit()
 
 def is_admin(user_id):
@@ -94,7 +86,7 @@ async def show_admin_panel(update, context):
 async def show_user_menu(update, context):
     if update.callback_query: await update.callback_query.edit_message_text(WELCOME, reply_markup=main_menu_keyboard())
     else: await update.message.reply_text(WELCOME, reply_markup=main_menu_keyboard())
-        async def mediator_handler(update, context):
+async def mediator_handler(update, context):
     text = "قیمت های واسطه گری به این صورت است:\n\nمعامله زیر 50 هزار : رایگان\n━━━━━━━━━━━━━━━━━\nمعامله 50 هزار تا 100 هزار: رایگان\n━━━━━━━━━━━━━━━━━\nمعامله 100 تا 300 : نفری ۱۰ هزار\n━━━━━━━━━━━━━━━━━\nمعامله 400 تا 900 هزار: نفری ۵۰ هزار\n━━━━━━━━━━━━━━━━━\nمعامله 1500 تا 3 میل : نفری 100 هزار\n━━━━━━━━━━━━━━━━━\nمعامله ۴ میل تا ۱۰ میل : نفری 350 هزار\n━━━━━━━━━━━━━━━━━\nمعامله های بالای 10 میل: نفری ۵۰۰ هزار\n\nاگر با قیمت ها اوکی بودید گزینه تایید رو بزنید."
     await update.callback_query.edit_message_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("✅ تایید", callback_data="mediator_confirm")], [InlineKeyboardButton("🔙 برگشت", callback_data="restart")]]))
 
@@ -253,187 +245,4 @@ async def start_reply_buy(update, context, req_id):
     context.user_data['admin_reply_buy_for'] = {'user_id': row[0], 'request_id': req_id}
     context.user_data['state'] = 'admin_reply_buy'
     await query.edit_message_text(f"پاسخ خود را برای کاربر {row[0]} تایپ کنید.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 لغو", callback_data="admin_back")]]))
-    async def admin_show_ads(update, context):
-    query = update.callback_query
-    c.execute("SELECT id, user_id, status FROM ads ORDER BY id DESC LIMIT 30")
-    rows = c.fetchall()
-    if not rows: return await query.edit_message_text("هیچ آگهی ثبت نشده است.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 برگشت به پنل", callback_data="admin_back")]]))
-    text, buttons = "📋 آگهی های ثبت شده:\n\n", []
-    for ad_id, user_id, status in rows:
-        emoji = "⏳" if status == 'pending' else ("✅" if status == 'approved' else "❌")
-        text += f"{emoji} #{ad_id} - کاربر {user_id}\n"
-        if status == 'pending': buttons.append([InlineKeyboardButton(f"مدیریت #{ad_id}", callback_data=f"manage_ad_{ad_id}")])
-    buttons.append([InlineKeyboardButton("🔙 برگشت به پنل", callback_data="admin_back")])
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(buttons))
 
-async def admin_manage_ad(update, context, ad_id):
-    query = update.callback_query
-    c.execute("SELECT user_id, status FROM ads WHERE id=?", (ad_id,))
-    row = c.fetchone()
-    if not row or row[1] != 'pending': return
-    await query.edit_message_text(f"📝 آگهی #{ad_id} - کاربر {row[0]}", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("✅ تایید", callback_data=f"approve_ad_{ad_id}"), InlineKeyboardButton("❌ رد", callback_data=f"reject_ad_{ad_id}")], [InlineKeyboardButton("🔙 برگشت", callback_data="admin_ads")]]))
-
-async def admin_show_pricing(update, context):
-    query = update.callback_query
-    c.execute("SELECT id, user_id, status FROM pricing_requests ORDER BY id DESC LIMIT 30")
-    rows = c.fetchall()
-    if not rows: return await query.edit_message_text("هیچ درخواستی وجود ندارد.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 برگشت به پنل", callback_data="admin_back")]]))
-    text, buttons = "💰 درخواست های قیمت گزاری:\n\n", []
-    for req_id, user_id, status in rows:
-        emoji = "⏳" if status == 'pending' else "✅"
-        text += f"{emoji} #{req_id} - کاربر {user_id}\n"
-        if status == 'pending': buttons.append([InlineKeyboardButton(f"ارسال قیمت #{req_id}", callback_data=f"send_price_{req_id}")])
-    buttons.append([InlineKeyboardButton("🔙 برگشت به پنل", callback_data="admin_back")])
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(buttons))
-
-async def admin_show_buy(update, context):
-    query = update.callback_query
-    c.execute("SELECT id, user_id, status FROM buy_requests ORDER BY id DESC LIMIT 30")
-    rows = c.fetchall()
-    if not rows: return await query.edit_message_text("هیچ درخواست خریدی وجود ندارد.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 برگشت به پنل", callback_data="admin_back")]]))
-    text, buttons = "🛒 درخواست های خرید:\n\n", []
-    for req_id, user_id, status in rows:
-        emoji = "⏳" if status == 'pending' else "✅"
-        text += f"{emoji} #{req_id} - کاربر {user_id}\n"
-        if status == 'pending': buttons.append([InlineKeyboardButton(f"پاسخ #{req_id}", callback_data=f"reply_buy_{req_id}")])
-    buttons.append([InlineKeyboardButton("🔙 برگشت به پنل", callback_data="admin_back")])
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(buttons))
-
-async def button_handler(update, context):
-    query = update.callback_query
-    await query.answer()
-    data = query.data
-    user_id = query.from_user.id
-    admin_only = ('approve_ad_', 'reject_ad_', 'send_price_', 'reject_pricing_', 'reply_buy_', 'manage_ad_', 'admin_')
-    if any(data.startswith(p) for p in admin_only) and not is_admin(user_id):
-        return await query.answer("دسترسی ندارید", show_alert=True)
-        
-    if data == "check_join":
-        if await check_membership(user_id, context.bot): return await query.answer("هنوز عضو نشدید", show_alert=True)
-        await show_user_menu(update, context)
-    elif data == "restart":
-        context.user_data.clear()
-        if is_admin(user_id): await show_admin_panel(update, context)
-        else: await show_user_menu(update, context)
-    elif data == "mediator": await mediator_handler(update, context)
-    elif data == "mediator_confirm": await mediator_confirm(update, context)
-    elif data == "post_ad": await post_ad_handler(update, context)
-    elif data == "pricing": await pricing_handler(update, context)
-    elif data == "buy_account": await buy_handler(update, context)
-    elif data == "report": await report_handler(update, context)
-    elif data == "submit_ad": await submit_ad(update, context)
-    elif data == "submit_pricing": await submit_pricing(update, context)
-    elif data == "submit_buy": await submit_buy(update, context)
-    elif data == "admin_back": await show_admin_panel(update, context)
-    elif data == "admin_ads": await admin_show_ads(update, context)
-    elif data == "admin_pricing": await admin_show_pricing(update, context)
-    elif data == "admin_buy": await admin_show_buy(update, context)
-    elif data == "admin_broadcast":
-        context.user_data['state'] = 'admin_broadcast'
-        await query.edit_message_text("📢 لطفاً پیام خود را برای ارسال همگانی بفرستید:", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 لغو", callback_data="admin_back")]]))
-    elif data.startswith("manage_ad_"): await admin_manage_ad(update, context, int(data.split('_')[-1]))
-    elif data.startswith("approve_ad_"): await approve_ad(update, context, int(data.split('_')[-1]))
-    elif data.startswith("reject_ad_"): await reject_ad(update, context, int(data.split('_')[-1]))
-    elif data.startswith("send_price_"): await start_send_price(update, context, int(data.split('_')[-1]))
-    elif data.startswith("reject_pricing_"): await reject_pricing(update, context, int(data.split('_')[-1]))
-    elif data.startswith("reply_buy_"): await start_reply_buy(update, context, int(data.split('_')[-1]))
-
-async def message_handler(update, context):
-    msg = update.message
-    user_id = update.effective_user.id
-    state = context.user_data.get('state')
-    if not state: return
-    
-    if state == 'admin_send_price' and is_admin(user_id):
-        info = context.user_data['admin_send_price_for']
-        try:
-            await context.bot.send_message(info['user_id'], f"💰 قیمت تقریبی اکانت شما:\n\n{msg.text}\n\nجهت خرید و واسطه گری: @Vasete_armin_azizi")
-            await msg.reply_text(f"✅ قیمت برای کاربر {info['user_id']} ارسال شد.")
-            c.execute("UPDATE pricing_requests SET status='answered' WHERE id=?", (info['request_id'],))
-            conn.commit()
-        except: pass
-        context.user_data.clear()
-        return
-        
-    if state == 'admin_reply_buy' and is_admin(user_id):
-        info = context.user_data['admin_reply_buy_for']
-        try:
-            await context.bot.copy_message(chat_id=info['user_id'], from_chat_id=user_id, message_id=msg.message_id)
-            await msg.reply_text(f"✅ پاسخ برای کاربر {info['user_id']} ارسال شد.")
-            c.execute("UPDATE buy_requests SET status='answered' WHERE id=?", (info['request_id'],))
-            conn.commit()
-        except: pass
-        context.user_data.clear()
-        return
-        
-    if state == 'admin_broadcast' and is_admin(user_id):
-        c.execute("SELECT user_id FROM users")
-        users = c.fetchall()
-        success, failed = 0, 0
-        progress_msg = await msg.reply_text("⏳ در حال ارسال پیام همگانی...")
-        for u in users:
-            try:
-                await context.bot.copy_message(chat_id=u[0], from_chat_id=user_id, message_id=msg.message_id)
-                success += 1
-            except: failed += 1
-        await progress_msg.edit_text(f"✅ پایان.\nموفق: {success}\nناموفق: {failed}")
-        context.user_data.clear()
-        return
-        
-    if not is_admin(user_id):
-        if await check_membership(user_id, context.bot):
-            buttons = [[InlineKeyboardButton(f"🔗 عضویت در {ch}", url=link)] for ch, link in CHANNELS]
-            buttons.append([InlineKeyboardButton("✅ عضو شدم", callback_data="check_join")])
-            return await msg.reply_text("ابتدا عضو شوید:", reply_markup=InlineKeyboardMarkup(buttons))
-            
-    if state == 'ad_waiting':
-        context.user_data['ad_messages'].append(msg.message_id)
-        if not context.user_data.get('prompted'):
-            context.user_data['prompted'] = True
-            await msg.reply_text("📥 پیام دریافت شد.\nوقتی تمام شد دکمه زیر را بزنید:", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("✅ پایان و ارسال", callback_data="submit_ad")]]))
-    elif state == 'pricing_waiting':
-        context.user_data['pricing_messages'].append(msg.message_id)
-        if not context.user_data.get('prompted'):
-            context.user_data['prompted'] = True
-            await msg.reply_text("📥 اطلاعات دریافت شد.\nوقتی تمام شد دکمه زیر را بزنید:", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("✅ پایان و ارسال", callback_data="submit_pricing")]]))
-    elif state == 'buy_waiting':
-        context.user_data['buy_messages'].append(msg.message_id)
-        if msg.text: context.user_data['buy_link'] = msg.text
-        if not context.user_data.get('prompted'):
-            context.user_data['prompted'] = True
-            await msg.reply_text("📥 دریافت شد.\nبرای ارسال نهایی دکمه زیر را بزنید:", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("✅ ارسال", callback_data="submit_buy")]]))
-    elif state == 'report_waiting':
-        try: await context.bot.forward_message(chat_id=ADMIN_ID, from_chat_id=user_id, message_id=msg.message_id)
-        except: pass
-        await msg.reply_text("گزارش شما ارسال شد ✅\nممنون از همکاری شما 🌹")
-        context.user_data.clear()
-
-# ================== بخش وب‌سرور برای رندر (FastAPI) ==================
-app = FastAPI()
-bot_app = Application.builder().token(BOT_TOKEN).updater(None).build()
-
-bot_app.add_handler(CommandHandler("start", start))
-bot_app.add_handler(CallbackQueryHandler(button_handler))
-bot_app.add_handler(MessageHandler((filters.TEXT | filters.PHOTO | filters.Document.ALL | filters.VIDEO) & ~filters.COMMAND, message_handler))
-
-@app.on_event("startup")
-async def on_startup():
-    await bot_app.initialize()
-    await bot_app.bot.set_my_commands([BotCommand("start", "شروع مجدد ربات")])
-    render_url = os.environ.get("RENDER_EXTERNAL_URL", "https://your-app-name.onrender.com")
-    webhook_url = f"{render_url}/{BOT_TOKEN}"
-    await bot_app.bot.set_webhook(webhook_url)
-
-@app.post(f"/{BOT_TOKEN}")
-async def telegram_webhook(request: Request):
-    data = await request.json()
-    update = Update.de_json(data, bot_app.bot)
-    await bot_app.process_update(update)
-    return Response(status_code=200)
-
-@app.get("/")
-async def root():
-    return {"status": "Bot is running!"}
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
